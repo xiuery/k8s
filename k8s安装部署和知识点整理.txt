@@ -1,0 +1,109 @@
+网上文章参考：
+安装：
+官网：http://kubernetes.io/docs/getting-started-guides/ubuntu/
+网文:http://blog.csdn.net/wangtaoking1/article/details/49122977
+进阶：http://geek.csdn.net/news/detail/58974
+测试：
+http://www.csdn.net/article/2015-06-12/2824937?reload=1
+
+例子：
+https://github.com/kubernetes/kubernetes/tree/release-1.2/examples
+
+https://github.com/kubernetes/kubernetes/releases/download/v1.2.4/kubernetes.tar.gz
+
+我实践的安装k8s步骤：
+
+环境： Ubuntu 14.04 LTS 64bit server 2台，都装好了docker
+
+步骤如下
+1、clone kubernetes 
+git clone https://github.com/kubernetes/kubernetes.git
+手动下载KUBE_VERSION、FLANNEL_VERSION、ETCD_VERSION相关版本
+
+然后设置环境变量
+$ export KUBE_VERSION=1.2.4
+$ export FLANNEL_VERSION=0.5.5
+$ export ETCD_VERSION=2.3.0
+
+修改cluster/ubuntu/config-default.sh文件
+export nodes="root@10.10.103.250 root@10.10.103.162 vcap@10.10.103.223"
+
+export role="ai i i"
+
+export NUM_NODES=${NUM_NODES:-3}
+
+export SERVICE_CLUSTER_IP_RANGE=192.168.3.0/24
+
+export FLANNEL_NET=172.16.0.0/16
+
+
+修改cluster/ubuntu/download-release.sh文件：
+
+注释掉下载3个文件的行代码，然后复制这3个文件到cluster/ubuntu/下，把版本号码去掉。（公司网络不稳定，直接下载会失败）
+2、设置其他主机
+
+设置主从免密登陆
+10.10.103.250 能免密登陆到其他机器
+
+3、开始安装
+执行KUBERNETES_PROVIDER=ubuntu ./kube-up.sh
+4、
+设置环境变量：
+把cluster/ubuntu/binaries加入到环境变量（path路径）
+验证：kubectl get nodes
+5、例子：
+1、tomcatweb应用
+cluster 是集群内访问，node实现外部访问
+2、nginx应用http://www.csdn.net/article/2015-06-12/2824937?reload=1
+
+
+
+
+验证：
+kubectl get rc
+kubectl get nodes
+kubectl get pod
+kubectl get services
+kubectl log podname
+kubectl log -c 容器名 podname
+kubectl describe pod podname
+kubectl delete pods podname
+kubectl get pods -o wide  显示pod所在的节点名
+彻底删除:
+kubectl delete -f ./yaml
+kubectl create -f ./yaml
+
+kubectl -s http://192.168.195.3:8080 create -f nginx-rc.yaml
+kubectl -s http://192.168.195.3:8080 get pods
+
+
+kubectl -s http://192.168.0.201:8080 describe pod nginx-controller-6zr34
+
+
+
+kubectl -s http://192.168.195.3:8080 create -f ./nginx-service-clusterip.yaml
+kubectl -s http://192.168.195.3:8080 describe service nginx-service-clusterip
+kubectl get service
+ssh 192.168.195.2 curl -s 192.168.3.100:8001
+kubectl -s http://192.168.195.3:8080 create -f ./nginx-service-nodeport.yaml
+kubectl get service
+kubectl -s http://192.168.195.3:8080 describe service nginx-service-nodeport
+
+
+知识点1：
+rc扩容：kubectl scale rc nginx-controller --replicas=3 #nginx-controller为控制器名称
+rc收缩：kubectl scale rc nginx-controller --replicas=1
+
+知识点2：
+更新pods：
+可以使用文件或者命令更新pods
+在配置文件中有几处需要注意：
+（1）RC的名字（name）不能与旧的RC的名字相同；
+（2）在selector中应至少有一个Label与旧的RC的Label不同，以标识其为新的RC。
+通过文件更新：kubectl rolling-update redis-master -f redis-master-controller-v2.yaml
+通过命令更新：kubectl rolling-update redis-master --image=redis-master:2.0
+
+
+replace patch edit rolling-update scale cordon drain expose config
+
+
